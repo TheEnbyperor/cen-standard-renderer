@@ -32,7 +32,7 @@ class DocxRenderer:
             self._render_blocks(sec.blocks, self.doc)
         self.doc.save(str(output.absolute()))
 
-    def _render_front_matter(self, src: standard.StandardSource,) -> None:
+    def _render_front_matter(self, src: standard.StandardSource, ) -> None:
         title = src.metadata.get("title")
         number = src.metadata.get("document_number")
 

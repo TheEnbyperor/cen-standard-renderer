@@ -37,7 +37,8 @@ def load_term_definitions(path: pathlib.Path) -> list[ir.TermDefinition]:
     return terms
 
 
-def generate_terms_and_definitions(parser: markdown_parser.MarkdownParser, terms: list[ir.TermDefinition]) -> list[ir.Block]:
+def generate_terms_and_definitions(parser: markdown_parser.MarkdownParser, terms: list[ir.TermDefinition]) -> list[
+    ir.Block]:
     if not terms:
         return []
 
