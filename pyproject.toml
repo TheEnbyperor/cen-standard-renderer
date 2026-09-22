@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+    "setuptools",
+    "python-docx",
+    "marko",
+    "pyyaml",
+]
+build-backend = "setuptools.build_meta"
