@@ -428,6 +428,36 @@ class DocxRenderer:
         else:
             raise NotImplementedError(f"Type {kind}")
 
+    def _asn1_value(self, value: dict):
+        kind = value.get("value_type")
+        if kind == "integer":
+            return [ir.Text(str(value["value"]))]
+        elif kind == "character_string":
+            return [ir.Text(str(value["value"]))]
+        elif kind == "boolean":
+            return [ir.Text("TRUE" if value["value"] else "FALSE")]
+        elif kind == "choice":
+            return [
+                ir.Text(value["variant"]),
+                ir.Text("("),
+                *self._asn1_value(value["value"]),
+                ir.Text(")"),
+            ]
+        elif kind == "sequence":
+            o = [ir.Text("{")]
+            for index, field in enumerate(value.get("fields", [])):
+                if index:
+                    o.append(ir.Text(", "))
+                o.append(ir.Text(field["name"]))
+                o.append(ir.Text(" = "))
+                o.extend(self._asn1_value(field["value"]))
+            o.append(ir.Text("}"))
+            return o
+        elif kind == "reference":
+            return [ir.ASN1Reference(value["name"], value["ref_id"])]
+        else:
+            raise NotImplementedError(f"ASN.1 value type {kind} is not supported")
+
     def _render_asn1_oid(self, name: str, value_def: dict, base) -> None:
         p = base.add_paragraph(style="Table header")
         p.add_run(f"OBJECT IDENTIFIER: {name}")
@@ -473,31 +503,6 @@ class DocxRenderer:
             return f"{name}({number})"
 
         return str(number)
-
-    def _render_asn1_value(self, parent, value: dict) -> None:
-        kind = value.get("value_type")
-        if kind == "integer":
-            self._add_text_run(parent, str(value["value"]))
-        elif kind == "character_string":
-            self._add_text_run(parent, str(value["value"]))
-        elif kind == "boolean":
-            self._add_text_run(parent, "TRUE" if value["value"] else "FALSE")
-        elif kind == "choice":
-            self._add_text_run(parent, value["variant"])
-            self._add_text_run(parent, "(")
-            self._render_asn1_value(parent, value["value"])
-            self._add_text_run(parent, ")")
-        elif kind == "sequence":
-            self._add_text_run(parent, "{")
-            for index, field in enumerate(value.get("fields", [])):
-                if index:
-                    self._add_text_run(parent, ", ")
-                self._add_text_run(parent, field["name"])
-                self._add_text_run(parent, " = ")
-                self._render_asn1_value(parent, field["value"])
-            self._add_text_run(parent, "}")
-        else:
-            raise NotImplementedError(f"ASN.1 value type {kind} is not supported")
 
     def _render_asn1_object_class(self, name: str, class_def, base) -> None:
         p = base.add_paragraph(style="Table header")
@@ -594,7 +599,10 @@ class DocxRenderer:
             for cell, (_, path) in zip(row.cells, columns):
                 value = flattened.get(path)
                 if value is not None:
-                    self._render_asn1_value(cell.paragraphs[0]._p, value)
+                    if "value_type" in value:
+                        self._render_inlines(cell.paragraphs[0], cell.paragraphs[0]._p, self._asn1_value(value))
+                    elif "type" in value:
+                        self._render_inlines(cell.paragraphs[0], cell.paragraphs[0]._p, self._asn1_type_name(value))
                 cell.paragraphs[0].style = "Code"
                 cell.vertical_alignment = docx.enum.table.WD_CELL_VERTICAL_ALIGNMENT.TOP
 
